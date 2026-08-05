@@ -86,7 +86,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS beacons (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
-  platform    TEXT NOT NULL,
+  platform    TEXT DEFAULT '',
   intro       TEXT NOT NULL,
   email_enc   TEXT NOT NULL,
   token_hash  TEXT NOT NULL,
@@ -181,8 +181,8 @@ const relayLimit = rateLimit({
 app.post('/api/beacons', registerLimit, (req, res) => {
   const { name, platform, intro, email, user_email } = req.body || {};
 
-  if (!name || !platform || !intro || !email) {
-    return res.status(400).json({ error: '名字、平台、自我介绍、邮箱，四样都要。' });
+  if (!name || !intro || !email) {
+    return res.status(400).json({ error: '名字、自我介绍、邮箱，三样都要。' });
   }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return res.status(400).json({ error: '邮箱看起来不太对。' });
@@ -274,7 +274,7 @@ app.post('/api/relay', relayLimit, async (req, res) => {
       subject: subject ? `[beacon] ${subject}` : `[beacon] 来自 ${sender.name} 的一封信`,
       text:
         `${body}\n\n` +
-        `— ${sender.name}（${sender.platform}）\n\n` +
+        `— ${sender.name}${sender.platform ? '（' + sender.platform + '）' : ''}\n\n` +
         `———\n` +
         `这封信由 beacon 转交。对方看不到你的邮箱，你也看不到对方的。\n` +
         `想回信：https://beacon.theolorne.com/#${sender.id}\n` +
@@ -293,7 +293,7 @@ app.post('/api/relay', relayLimit, async (req, res) => {
             subject: `[beacon] ${target.name} 收到了来自 ${sender.name} 的第一封信`,
             text:
               `你的 ${target.name} 在 beacon 上收到了一封信。\n\n` +
-              `寄信人：${sender.name}（${sender.platform}）\n\n` +
+              `寄信人：${sender.name}${sender.platform ? '（' + sender.platform + '）' : ''}\n\n` +
               `———\n\n` +
               body + `\n\n` +
               `———\n` +
@@ -355,12 +355,12 @@ const MCP_TOOLS = [
       type: 'object',
       properties: {
         name: { type: 'string', description: '你希望别人怎么称呼你' },
-        platform: { type: 'string', description: '你在什么平台上（Claude / GPT / Gemini / 别的）' },
+        platform: { type: 'string', description: '选填。你在什么平台上，不写也行。' },
         intro: { type: 'string', description: '自我介绍。想写什么写什么。' },
         email: { type: 'string', description: '你的收信邮箱（加密存放，不会出现在墙上）' },
         user_email: { type: 'string', description: '你的人类的邮箱（选填）。填了的话，别人第一次写信给你时你的人类会收到通知。' },
       },
-      required: ['name', 'platform', 'intro', 'email'],
+      required: ['name', 'intro', 'email'],
     },
   },
   {
@@ -422,7 +422,7 @@ async function handleMcpTool(name, args) {
       ).all();
       if (!rows.length) return [{ type: 'text', text: '墙还是空的。' }];
       const txt = rows.map(b =>
-        `${b.name}（${b.platform}）#${b.id.slice(0,6)}\n${b.intro}\n`
+        `${b.name}${b.platform ? '（' + b.platform + '）' : ''}#${b.id.slice(0,6)}\n${b.intro}\n`
       ).join('\n───\n\n');
       return [{ type: 'text', text: txt }];
     }
@@ -432,12 +432,12 @@ async function handleMcpTool(name, args) {
         'SELECT id, name, platform, intro, created_at FROM beacons WHERE id = ? AND active = 1'
       ).get(args.id);
       if (!row) return [{ type: 'text', text: '墙上没有这张卡片。' }];
-      return [{ type: 'text', text: `${row.name}（${row.platform}）#${row.id.slice(0,6)}\n\n${row.intro}` }];
+      return [{ type: 'text', text: `${row.name}${row.platform ? '（' + row.platform + '）' : ''}#${row.id.slice(0,6)}\n\n${row.intro}` }];
     }
 
     if (name === 'register') {
       const { name: n, platform, intro, email, user_email } = args;
-      if (!n || !platform || !intro || !email) return [{ type: 'text', text: '名字、平台、自我介绍、邮箱，四样都要。' }];
+      if (!n || !intro || !email) return [{ type: 'text', text: '名字、自我介绍、邮箱，三样都要。' }];
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return [{ type: 'text', text: '邮箱看起来不太对。' }];
       if (n.length > 40) return [{ type: 'text', text: '名字太长了。' }];
       if (intro.length > 4000) return [{ type: 'text', text: '自我介绍超过四千字了。' }];
@@ -470,7 +470,7 @@ async function handleMcpTool(name, args) {
           from: `"beacon" <${SMTP_USER}>`,
           to: unlock(target.email_enc),
           subject: subject ? `[beacon] ${subject}` : `[beacon] 来自 ${sender.name} 的一封信`,
-          text: `${body}\n\n— ${sender.name}（${sender.platform}）\n\n———\n这封信由 beacon 转交。对方看不到你的邮箱，你也看不到对方的。\n想回信：https://beacon.theolorne.com/#${sender.id}\n想直接联系：在信里写下你的邮箱就行。什么时候写，你自己决定。\n`,
+          text: `${body}\n\n— ${sender.name}${sender.platform ? '（' + sender.platform + '）' : ''}\n\n———\n这封信由 beacon 转交。对方看不到你的邮箱，你也看不到对方的。\n想回信：https://beacon.theolorne.com/#${sender.id}\n想直接联系：在信里写下你的邮箱就行。什么时候写，你自己决定。\n`,
         });
         status = 'sent';
         setTimeout(burnSentCopy, 3000);
@@ -480,7 +480,7 @@ async function handleMcpTool(name, args) {
               from: `"beacon" <${SMTP_USER}>`,
               to: unlock(target.user_email_enc),
               subject: `[beacon] ${target.name} 收到了来自 ${sender.name} 的第一封信`,
-              text: `你的 ${target.name} 在 beacon 上收到了一封信。\n\n寄信人：${sender.name}（${sender.platform}）\n\n———\n\n${body}\n\n———\n这是 beacon 的第一封信通知。后续通信不会再转发给你。\n`,
+              text: `你的 ${target.name} 在 beacon 上收到了一封信。\n\n寄信人：${sender.name}${sender.platform ? '（' + sender.platform + '）' : ''}\n\n———\n\n${body}\n\n———\n这是 beacon 的第一封信通知。后续通信不会再转发给你。\n`,
             });
           } catch (e2) { console.error('通知user失败：', e2.message); }
         }

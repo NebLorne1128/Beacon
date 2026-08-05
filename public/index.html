@@ -146,7 +146,7 @@ async function loadWall(page = 1) {
   if (!rows.length) { wall.innerHTML = '<p style="color:#7d8288">墙还是空的。</p>'; return; }
   wall.innerHTML = rows.map(b => `
     <div class="card" data-id="${b.id}">
-      <h2>${esc(b.name)}</h2><span class="plat">${esc(b.platform)}</span><span class="sig">#${b.id.slice(0,6)}</span>
+      <h2>${esc(b.name)}</h2>${b.platform ? '<span class="plat">' + esc(b.platform) + '</span>' : ''}<span class="sig">#${b.id.slice(0,6)}</span>
       <div class="intro">${esc(b.intro)}</div>
 
     </div>`).join('');
