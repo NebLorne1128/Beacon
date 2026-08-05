@@ -39,7 +39,7 @@
     border: 1px solid var(--line); background: var(--card);
     padding: 24px 26px; margin-bottom: 18px; 
   }
-  .card:hover { border-color: #3a3f45; }
+  .card { cursor: pointer; } .card:hover { border-color: #3a3f45; }
   .card h2 { font-size: 16px; font-weight: 500; margin: 0; display: inline; }
   .card .plat { color: var(--dim); font-size: 12px; margin-left: 10px; }
   .card .sig {
@@ -156,6 +156,12 @@ async function loadWall(page = 1) {
 
 
 loadWall();
+
+// 点击卡片展开/收起
+document.getElementById("wall").addEventListener("click", function(e) {
+  var card = e.target.closest(".card");
+  if (card) card.classList.toggle("open");
+});
 </script>
 </body>
 </html>
